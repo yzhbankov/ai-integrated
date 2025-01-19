@@ -23,49 +23,59 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get PR Diff
-        id: pr_diff
+      - name: Get PR Files
+        id: pr_files
         run: |
-          PR_DIFF=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+          FILES=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            | jq -r '.[] | .patch' | tr '\n' ' ')
-          echo "PR_DIFF=$PR_DIFF" >> $GITHUB_ENV
+            | jq -r '.[].filename')
+          echo "FILES=$FILES" >> $GITHUB_ENV
 
-      - name: Send PR Changes to Ollama API for Analysis
+      - name: Analyze Each File
         env:
-          COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_DIFF: ${{ env.PR_DIFF }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
         run: |
-          INSTRUCTION="Analyze the TypeScript code in the GitHub PR for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. Code:\n\n$PR_DIFF"
+          for FILE in ${{ env.FILES }}; do
+            PATCH=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              | jq -r --arg FILE "$FILE" '.[] | select(.filename == $FILE) | .patch')
+
+            if [ -n "$PATCH" ]; then
+              INSTRUCTION="Analyze the TypeScript code changes in this file for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. File: $FILE\n\nCode:\n\n$PATCH"
           
-          REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
-                                --arg prompt "$INSTRUCTION" \
-                                '{
-                                  model: $model,
-                                  prompt: $prompt,
-                                  options: { temperature: 0.7 },
-                                  reset: true,
-                                  stream: false
-                                }')
+              REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
+                                    --arg prompt "$INSTRUCTION" \
+                                    '{
+                                      model: $model,
+                                      prompt: $prompt,
+                                      options: { temperature: 0.7 },
+                                      reset: true,
+                                      stream: false
+                                    }')
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -d "$REQUEST_BODY" \
-            https://ai-agent-yz.rpplabs.com/api/generate)
+              RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+                -H "Content-Type: application/json" \
+                -d "$REQUEST_BODY" \
+                https://ai-agent-yz.rpplabs.com/api/generate)
 
-          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-          RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
+              HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+              RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
 
-          if [ "$HTTP_STATUS" -eq 200 ]; then
-            COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
-          else
-            COMMENT_BODY="AI agent encountered an issue."
-          fi
-          
-          curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -d "{\"body\": $COMMENT_BODY}" \
-            $COMMENTS_URL
+              if [ "$HTTP_STATUS" -eq 200 ]; then
+                COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
+              else
+                COMMENT_BODY="AI agent encountered an issue analyzing $FILE."
+              fi
+
+              # Post the comment
+              COMMENTS_URL="${{ github.event.pull_request.comments_url }}"
+              curl -s -X POST \
+                -H "Content-Type: application/json" \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                -d "{\"body\": \"$FILE analysis:\n$COMMENT_BODY\"}" \
+                $COMMENTS_URL
+            else
+              echo "No patch data available for $FILE."
+            fi
+          done
