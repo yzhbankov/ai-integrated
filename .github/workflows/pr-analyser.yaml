@@ -18,35 +18,30 @@ jobs:
         shell: bash
 
     steps:
-      - name: Get PR Changes (Diff)
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+
+      - name: List all changed files
+        run: |
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            echo "$file was changed"
+          done
+
+      - name: Get PR diff
         id: pr_diff
         run: |
-          # Fetch the diff of the pull request changes
-          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-          "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files")
-            
-          # Print the raw API response for debugging
-          echo "API Response: $RESPONSE"
-            
-          # Check if the response is empty
-          if [ -z "$RESPONSE" ]; then
-            echo "No changes found in the PR diff."
-            exit 1
-          fi
+          # Fetch the PR diff
+          PR_DIFF=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            | jq -r '.[] | .patch' | tr '\n' ' ')
 
-          # Use jq to extract patches from the response
-          PR_DIFF=$(echo "$RESPONSE" | jq -r 'map(.patch) | join("\n")')
-            
-          # Check if the PR diff is empty
-          if [ -z "$PR_DIFF" ]; then
-            echo "No patch data found in the PR diff."
-            exit 1
-          fi
-          
           echo "PR Diff: $PR_DIFF"
-
-          # Set the PR diff as an output for the next step
-          echo "pr_diff=$PR_DIFF" >> $GITHUB_ENV
+          echo "PR_DIFF=$PR_DIFF" >> $GITHUB_ENV
 
       - name: Send PR Changes to Ollama API for Analysis
         env:
