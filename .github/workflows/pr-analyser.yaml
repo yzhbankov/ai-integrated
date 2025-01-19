@@ -33,6 +33,7 @@ jobs:
 
       - name: Analyze Each File
         env:
+          COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
           PR_FILES: ${{ env.PR_FILES }}
@@ -74,19 +75,12 @@ jobs:
                 COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
               else
                 COMMENT_BODY="AI agent encountered an issue analyzing $FILE."
-              fi
-
-              # Post the comment
-              COMMENTS_URL="${{ github.event.pull_request.comments_url }}"
-              COMMENT_BODY=$(echo "$COMMENT_BODY" | jq -Rs .)
-  
-              # Ensure the comment body is properly escaped for the GitHub API
-              FORMATTED_COMMENT_BODY=$(echo "$COMMENT_BODY" | sed 's/\\n/\n/g' | jq -Rs .)
+              fi          
   
               curl -s -X POST \
                 -H "Content-Type: application/json" \
                 -H "Authorization: token $GITHUB_TOKEN" \
-                -d "{\"body\": $FORMATTED_COMMENT_BODY}" \
+                -d "{\"body\": $COMMENT_BODY}" \
                 $COMMENTS_URL
             else
               echo "No patch data available for $FILE."
