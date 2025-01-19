@@ -52,6 +52,7 @@ jobs:
                     \"options\": {
                       \"temperature\": 0.7
                     },
+                    \"reset\": true,
                     \"stream\": false
                   }" \
               https://ai-agent-yz.rpplabs.com/api/generate)
