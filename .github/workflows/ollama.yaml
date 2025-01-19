@@ -45,11 +45,17 @@ jobs:
           echo "HTTP Status: $HTTP_STATUS"
           echo "Response Body: $RESPONSE_BODY"
           
-          # Check HTTP status
+          # Determine comment content based on HTTP status
           if [ "$HTTP_STATUS" -eq 200 ]; then
-            # Post the response body as a comment on the issue
-            echo "$RESPONSE_BODY" | gh issue comment $ISSUE_NUMBER --body-file -
+            COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response')
           else
-            # Post "AI agent has issue" as a comment on the issue
-            gh issue comment $ISSUE_NUMBER --body "AI agent has issue"
+            COMMENT_BODY="AI agent encountered an issue."
           fi
+          
+          # Post the comment on the issue
+          curl \
+            -X POST \
+            $COMMENTS_URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -d "{\"body\": \"$COMMENT_BODY\"}"
