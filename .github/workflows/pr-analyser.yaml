@@ -41,7 +41,7 @@ jobs:
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}  # Use the variable here
         run: |
             # Construct the prompt for Ollama to analyze the PR diff
-            INSTRUCTION="Check provided code and propose improvements of this code:\n\n$PR_DIFF"
+            INSTRUCTION="Check provided TypeScript code and propose improvements of this code. Code:\n\n$PR_DIFF"
             
             # Send POST request with the PR diff and instructions to Ollama API
             RESPONSE=$(curl -s -w "%{http_code}" -X POST \
@@ -52,6 +52,7 @@ jobs:
                     \"options\": {
                       \"temperature\": 0.7
                     },
+                    \"reset\": true,
                     \"stream\": false
                   }" \
               https://ai-agent-yz.rpplabs.com/api/generate)
