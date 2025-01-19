@@ -22,16 +22,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v45
-
-      - name: List all changed files
-        run: |
-          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
-            echo "$file was changed"
-          done
-
       - name: Get PR diff
         id: pr_diff
         run: |
@@ -45,7 +35,7 @@ jobs:
 
       - name: Send PR Changes to Ollama API for Analysis
         env:
-          COMMENTS_URL: ${{ github.event.issue.comments_url }}
+          COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_DIFF: ${{ env.pr_diff }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}  # Use the variable here
