@@ -1,0 +1,84 @@
+name: 'PR Analyser:'
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  terraform:
+    name: 'Analyse PR Changes with AI:'
+
+    # Only execute if this is a pull request issue and a comment has been made
+    if: ${{ github.event.issue.pull_request && github.event.pull_request.base.ref == 'master' }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Get PR Changes (Diff)
+        id: pr_diff
+        run: |
+          # Fetch the diff of the pull request changes
+          PR_DIFF=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/files" | jq -r 'map(.patch) | join("\n")')
+          
+          # Check if the PR diff is empty
+          if [ -z "$PR_DIFF" ]; then
+            echo "No changes found in the PR diff."
+            exit 1
+          fi
+          
+          echo "PR Diff: $PR_DIFF"
+
+          # Set the PR diff as an output for the next step
+          echo "pr_diff=$PR_DIFF" >> $GITHUB_ENV
+
+      - name: Send PR Changes to Ollama API for Analysis
+        env:
+          COMMENTS_URL: ${{ github.event.issue.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_DIFF: ${{ env.pr_diff }}
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}  # Use the variable here
+        run: |
+            # Construct the prompt for Ollama to analyze the PR diff
+            INSTRUCTION="Analyze the following changes in the PR and provide feedback on the code quality, style, and any potential issues. Here are the changes:\n\n$PR_DIFF"
+            
+            # Send POST request with the PR diff and instructions to Ollama API
+            RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+              -H "Content-Type: application/json" \
+              -d "{
+                    \"model\": \"$OLLAMA_MODEL\",
+                    \"prompt\": \"$INSTRUCTION\",
+                    \"options\": {
+                      \"temperature\": 0.7
+                    },
+                    \"stream\": false
+                  }" \
+              https://ai-agent-yz.rpplabs.com/api/generate)
+            
+            # Extract status code and response body
+            HTTP_STATUS="${RESPONSE: -3}"
+            RESPONSE_BODY="${RESPONSE%???}"
+            
+            echo "HTTP Status: $HTTP_STATUS"
+            echo "Response Body: $RESPONSE_BODY"
+            
+            # Determine comment content based on HTTP status
+            if [ "$HTTP_STATUS" -eq 200 ]; then
+              COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
+            else
+              COMMENT_BODY="AI agent encountered an issue."
+            fi
+            
+            # Post the result as a comment on the PR issue
+            curl \
+              -X POST \
+              $COMMENTS_URL \
+              -H "Content-Type: application/json" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              -d "{\"body\": $COMMENT_BODY}"
