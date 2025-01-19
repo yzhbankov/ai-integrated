@@ -46,9 +46,25 @@ jobs:
               | jq -r --arg FILE "$FILE" '.[] | select(.filename == $FILE) | .patch')
 
             echo "PATCH response for $FILE: $PATCH"
+          
+            EXTENSION="${FILE##*.}"
+            case "$EXTENSION" in
+              js)
+                LANGUAGE="JavaScript"
+                ;;
+              ts)
+                LANGUAGE="TypeScript"
+                ;;
+              py)
+                LANGUAGE="Python"
+                ;;
+              *)
+                LANGUAGE="Unknown"
+                ;;
+            esac
 
             if [ -n "$PATCH" ]; then
-              INSTRUCTION="Analyze the TypeScript code changes in this file for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. File: $FILE\n\nCode:\n\n$PATCH"
+              INSTRUCTION="Analyze the $LANGUAGE code changes in this file for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. File: $FILE\n\nCode:\n\n$PATCH"
 
               REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
                                     --arg prompt "$INSTRUCTION" \
