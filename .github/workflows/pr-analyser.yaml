@@ -35,7 +35,7 @@ jobs:
         env:
           COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_DIFF: ${{ env.pr_diff }}
+          PR_DIFF: ${{ env.PR_DIFF }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
         run: |
           INSTRUCTION="Check TypeScript code diff and respond only with the improved code:\n\n$PR_DIFF"
