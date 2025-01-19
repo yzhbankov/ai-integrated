@@ -63,7 +63,7 @@ jobs:
                 ;;
             esac
 
-            if [ -n "$PATCH" ]; then
+            if [ "$LANGUAGE" != "Unknown" ] && [ -n "$PATCH" ]; then
               INSTRUCTION="Analyze the $LANGUAGE code changes in this file for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. File: $FILE\n\nCode:\n\n$PATCH"
 
               REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
@@ -97,7 +97,7 @@ jobs:
                 -H "Content-Type: application/json" \
                 -H "Authorization: token $GITHUB_TOKEN" \
                 -d "{\"body\": \"$COMMENT_BODY\", \"path\": \"$FILE\", \"position\": -1}" \
-                "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments"
+                $COMMENTS_URL
             else
               echo "No patch data available for $FILE."
             fi
