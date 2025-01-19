@@ -35,8 +35,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
+          FILES: ${{ env.FILES }}
         run: |
-          for FILE in ${{ env.FILES }}; do
+          echo "Processing files: $FILES"
+          for FILE in $FILES; do
             PATCH=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
               -H "Authorization: token $GITHUB_TOKEN" \
               | jq -r --arg FILE "$FILE" '.[] | select(.filename == $FILE) | .patch')
