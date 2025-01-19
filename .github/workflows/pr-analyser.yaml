@@ -22,12 +22,24 @@ jobs:
         id: pr_diff
         run: |
           # Fetch the diff of the pull request changes
-          PR_DIFF=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}/files" | jq -r 'map(.patch) | join("\n")')
-          
+          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files")
+            
+          # Print the raw API response for debugging
+          echo "API Response: $RESPONSE"
+            
+          # Check if the response is empty
+          if [ -z "$RESPONSE" ]; then
+            echo "No changes found in the PR diff."
+            exit 1
+          fi
+
+          # Use jq to extract patches from the response
+          PR_DIFF=$(echo "$RESPONSE" | jq -r 'map(.patch) | join("\n")')
+            
           # Check if the PR diff is empty
           if [ -z "$PR_DIFF" ]; then
-            echo "No changes found in the PR diff."
+            echo "No patch data found in the PR diff."
             exit 1
           fi
           
