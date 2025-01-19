@@ -21,9 +21,9 @@ jobs:
     steps:
       - name: Send Comment Data to Server
         env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENTS_URL: ${{ github.event.issue.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           # Send POST request and capture response
           RESPONSE=$(curl -s -w "%{http_code}" -X POST \
