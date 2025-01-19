@@ -1,4 +1,4 @@
-name: 'PR Analyser:'
+name: 'PR Analyser'
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   terraform:
-    name: 'Analyse PR Changes with AI:'
+    name: 'Analyse PR Changes with AI'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -18,19 +18,17 @@ jobs:
         shell: bash
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Code
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - name: Get PR diff
+      - name: Get PR Diff
         id: pr_diff
         run: |
-          # Fetch the PR diff
           PR_DIFF=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             | jq -r '.[] | .patch' | tr '\n' ' ')
-
-          echo "PR Diff: $PR_DIFF"
           echo "PR_DIFF=$PR_DIFF" >> $GITHUB_ENV
 
       - name: Send PR Changes to Ollama API for Analysis
@@ -38,52 +36,36 @@ jobs:
           COMMENTS_URL: ${{ github.event.pull_request.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_DIFF: ${{ env.pr_diff }}
-          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}  # Use the variable here
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
         run: |
-          # Construct the prompt for Ollama to analyze the PR diff
-          INSTRUCTION="Check TypeScript code diff and response only with the improved code :\n\n$PR_DIFF"
-            
-          # Prepare the request body
-          REQUEST_BODY=$(cat << "EOF"
-          {
-            "model": "$OLLAMA_MODEL",
-            "prompt": "$INSTRUCTION",
-            "options": {
-              "temperature": 0.1
-            },
-            "reset": true,
-            "stream": false
-          }
-          EOF
-          )
+          INSTRUCTION="Check TypeScript code diff and respond only with the improved code:\n\n$PR_DIFF"
+          
+          REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
+                                --arg prompt "$INSTRUCTION" \
+                                '{
+                                  model: $model,
+                                  prompt: $prompt,
+                                  options: { temperature: 0.1 },
+                                  reset: true,
+                                  stream: false
+                                }')
 
-          # Log the request body for debugging purposes
-          echo "Request Body: $REQUEST_BODY"
-
-          # Send POST request with the PR diff and instructions to Ollama API
-          RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Content-Type: application/json" \
             -d "$REQUEST_BODY" \
-          https://ai-agent-yz.rpplabs.com/api/generate)
-    
-          # Extract status code and response body
-          HTTP_STATUS="${RESPONSE: -3}"
-          RESPONSE_BODY="${RESPONSE%???}"
+            https://ai-agent-yz.rpplabs.com/api/generate)
 
-          echo "HTTP Status: $HTTP_STATUS"
-          echo "Response Body: $RESPONSE_BODY"
-    
-          # Determine comment content based on HTTP status
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+          RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
+
           if [ "$HTTP_STATUS" -eq 200 ]; then
             COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
           else
             COMMENT_BODY="AI agent encountered an issue."
           fi
           
-          # Post the result as a comment on the PR issue
-          curl \
-            -X POST \
-            $COMMENTS_URL \
+          curl -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: token $GITHUB_TOKEN" \
-            -d "{\"body\": $COMMENT_BODY}"
+            -d "{\"body\": $COMMENT_BODY}" \
+            $COMMENTS_URL
