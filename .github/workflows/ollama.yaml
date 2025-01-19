@@ -1,0 +1,48 @@
+name: 'AI agent:'
+
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  terraform:
+    name: 'Check with AI:'
+
+    # Only execute if this is a pull request issue and a comment /plan master has been made
+    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, 'ollama:') }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Send Comment Data to Server
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            # Send POST request and capture response
+            RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+              -H "Content-Type: application/json" \
+              -d "{\"comment\": \"$COMMENT_BODY\"}" \
+              https://ai-agent-yz.rpplabs.com/api/generate)
+            
+            # Extract status code and body
+            HTTP_STATUS="${RESPONSE: -3}"
+            RESPONSE_BODY="${RESPONSE%???}"
+            
+            echo "HTTP Status: $HTTP_STATUS"
+            echo "Response Body: $RESPONSE_BODY"
+            
+            # Check HTTP status
+            if [ "$HTTP_STATUS" -eq 200 ]; then
+              # Post the response body as a comment on the issue
+              echo "$RESPONSE_BODY" | gh issue comment $ISSUE_NUMBER --body-file -
+            else
+              # Post "AI agent has issue" as a comment on the issue
+              gh issue comment $ISSUE_NUMBER --body "AI agent has issue"
+            fi
