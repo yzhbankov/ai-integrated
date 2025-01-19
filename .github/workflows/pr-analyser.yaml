@@ -40,21 +40,22 @@ jobs:
           PR_DIFF: ${{ env.pr_diff }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}  # Use the variable here
         run: |
-            # Construct the prompt for Ollama to analyze the PR diff
-            INSTRUCTION="Check TypeScript code diff and response only with the improved code :\n\n$PR_DIFF"
+          # Construct the prompt for Ollama to analyze the PR diff
+          INSTRUCTION="Check TypeScript code diff and response only with the improved code :\n\n$PR_DIFF"
             
-            # Prepare the request body
-            REQUEST_BODY=$(cat <<EOF
-            {
-              "model": "$OLLAMA_MODEL",
-              "prompt": "$INSTRUCTION",
-              "options": {
-                "temperature": 0.1
-              },
-              "reset": true,
-              "stream": false
-            }
-          EOF)
+          # Prepare the request body
+          REQUEST_BODY=$(cat << "EOF"
+          {
+            "model": "$OLLAMA_MODEL",
+            "prompt": "$INSTRUCTION",
+            "options": {
+              "temperature": 0.1
+            },
+            "reset": true,
+            "stream": false
+          }
+          EOF
+          )
 
           # Log the request body for debugging purposes
           echo "Request Body: $REQUEST_BODY"
