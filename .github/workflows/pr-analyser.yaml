@@ -43,38 +43,46 @@ jobs:
             # Construct the prompt for Ollama to analyze the PR diff
             INSTRUCTION="Check TypeScript code diff and response only with the improved code :\n\n$PR_DIFF"
             
-            # Send POST request with the PR diff and instructions to Ollama API
-            RESPONSE=$(curl -s -w "%{http_code}" -X POST \
-              -H "Content-Type: application/json" \
-              -d "{
-                    \"model\": \"$OLLAMA_MODEL\",
-                    \"prompt\": \"$INSTRUCTION\",
-                    \"options\": {
-                      \"temperature\": 0.7
-                    },
-                    \"reset\": true,
-                    \"stream\": false
-                  }" \
-              https://ai-agent-yz.rpplabs.com/api/generate)
-            
-            # Extract status code and response body
-            HTTP_STATUS="${RESPONSE: -3}"
-            RESPONSE_BODY="${RESPONSE%???}"
-            
-            echo "HTTP Status: $HTTP_STATUS"
-            echo "Response Body: $RESPONSE_BODY"
-            
-            # Determine comment content based on HTTP status
-            if [ "$HTTP_STATUS" -eq 200 ]; then
-              COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
-            else
-              COMMENT_BODY="AI agent encountered an issue."
-            fi
-            
-            # Post the result as a comment on the PR issue
-            curl \
-              -X POST \
-              $COMMENTS_URL \
-              -H "Content-Type: application/json" \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              -d "{\"body\": $COMMENT_BODY}"
+            # Prepare the request body
+            REQUEST_BODY=$(cat <<EOF
+            {
+              "model": "$OLLAMA_MODEL",
+              "prompt": "$INSTRUCTION",
+              "options": {
+                "temperature": 0.1
+              },
+              "reset": true,
+              "stream": false
+            }
+          EOF)
+
+          # Log the request body for debugging purposes
+          echo "Request Body: $REQUEST_BODY"
+
+          # Send POST request with the PR diff and instructions to Ollama API
+          RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "$REQUEST_BODY" \
+          https://ai-agent-yz.rpplabs.com/api/generate)
+    
+          # Extract status code and response body
+          HTTP_STATUS="${RESPONSE: -3}"
+          RESPONSE_BODY="${RESPONSE%???}"
+
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response Body: $RESPONSE_BODY"
+    
+          # Determine comment content based on HTTP status
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
+          else
+            COMMENT_BODY="AI agent encountered an issue."
+          fi
+          
+          # Post the result as a comment on the PR issue
+          curl \
+            -X POST \
+            $COMMENTS_URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -d "{\"body\": $COMMENT_BODY}"
