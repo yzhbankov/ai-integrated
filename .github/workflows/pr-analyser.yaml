@@ -59,6 +59,9 @@ jobs:
                                       stream: false
                                     }')
 
+              # Print the REQUEST_BODY before sending it
+              echo "Request Body to be sent: $REQUEST_BODY"
+
               RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
                 -H "Content-Type: application/json" \
                 -d "$REQUEST_BODY" \
