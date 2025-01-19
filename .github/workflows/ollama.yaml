@@ -47,7 +47,7 @@ jobs:
           
           # Determine comment content based on HTTP status
           if [ "$HTTP_STATUS" -eq 200 ]; then
-            COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response')
+            COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
           else
             COMMENT_BODY="AI agent encountered an issue."
           fi
@@ -58,4 +58,4 @@ jobs:
             $COMMENTS_URL \
             -H "Content-Type: application/json" \
             -H "Authorization: token $GITHUB_TOKEN" \
-            -d "{\"body\": \"$COMMENT_BODY\"}"
+            -d "{\"body\": $COMMENT_BODY}"
