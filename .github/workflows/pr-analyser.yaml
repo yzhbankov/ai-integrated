@@ -26,19 +26,19 @@ jobs:
       - name: Get PR Files
         id: pr_files
         run: |
-          FILES=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
+          PR_FILES=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             | jq -r '.[].filename')
-          echo "FILES=$FILES" >> $GITHUB_ENV
+          echo "PR_FILES=$PR_FILES" >> $GITHUB_ENV
 
       - name: Analyze Each File
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
-          FILES: ${{ env.FILES }}
+          PR_FILES: ${{ env.PR_FILES }}
         run: |
-          echo "Processing files: $FILES"
-          for FILE in $FILES; do
+          echo "Processing files: $PR_FILES"
+          for FILE in $PR_FILES; do
             PATCH=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
               -H "Authorization: token $GITHUB_TOKEN" \
               | jq -r --arg FILE "$FILE" '.[] | select(.filename == $FILE) | .patch')
