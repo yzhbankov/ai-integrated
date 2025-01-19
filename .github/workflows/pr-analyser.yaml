@@ -38,14 +38,14 @@ jobs:
           PR_DIFF: ${{ env.PR_DIFF }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
         run: |
-          INSTRUCTION="Check TypeScript code diff and respond only with the improved code:\n\n$PR_DIFF"
+          INSTRUCTION="Analyze the TypeScript code in the GitHub PR for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. Code:\n\n$PR_DIFF"
           
           REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
                                 --arg prompt "$INSTRUCTION" \
                                 '{
                                   model: $model,
                                   prompt: $prompt,
-                                  options: { temperature: 0.1 },
+                                  options: { temperature: 0.3 },
                                   reset: true,
                                   stream: false
                                 }')
