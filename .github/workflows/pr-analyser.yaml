@@ -78,12 +78,15 @@ jobs:
 
               # Post the comment
               COMMENTS_URL="${{ github.event.pull_request.comments_url }}"
-              COMMENT_BODY=$(echo "$COMMENT_BODY" | jq -Rs .) # Escape the comment body
+              COMMENT_BODY=$(echo "$COMMENT_BODY" | jq -Rs .)
+  
+              # Ensure the comment body is properly escaped for the GitHub API
+              FORMATTED_COMMENT_BODY=$(echo "$COMMENT_BODY" | sed 's/\\n/\n/g' | jq -Rs .)
   
               curl -s -X POST \
                 -H "Content-Type: application/json" \
                 -H "Authorization: token $GITHUB_TOKEN" \
-                -d "{\"body\": $COMMENT_BODY}" \
+                -d "{\"body\": $FORMATTED_COMMENT_BODY}" \
                 $COMMENTS_URL
             else
               echo "No patch data available for $FILE."
