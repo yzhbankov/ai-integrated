@@ -24,12 +24,13 @@ jobs:
           COMMENTS_URL: ${{ github.event.issue.comments_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
         run: |
           # Send POST request and capture response
           RESPONSE=$(curl -s -w "%{http_code}" -X POST \
             -H "Content-Type: application/json" \
             -d "{
-                  \"model\": \"codellama:7b\",
+                  \"model\": \"$OLLAMA_MODEL\",
                   \"prompt\": \"$COMMENT_BODY\",
                   \"options\": {
                     \"temperature\": 0.7
