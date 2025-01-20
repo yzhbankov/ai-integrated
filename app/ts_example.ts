@@ -1,6 +1,6 @@
-function ts_example(a) {
+function test_func(a) {
     if (a <= 1) {
-        return a;
+        return a
     }
-    return a * ts_example(a - 1);
+    return b * test_func(a - 1);
 }
