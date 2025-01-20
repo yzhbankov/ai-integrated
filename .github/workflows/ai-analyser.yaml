@@ -41,64 +41,20 @@ jobs:
           echo "Processing files: $PR_FILES"
           IFS=',' read -ra FILES_ARRAY <<< "$PR_FILES"
           for FILE in "${FILES_ARRAY[@]}"; do
-            PATCH=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              | jq -r --arg FILE "$FILE" '.[] | select(.filename == $FILE) | .patch')
-
-            echo "PATCH response for $FILE: $PATCH"
+            echo "Commiting to $FILE"
           
-            EXTENSION="${FILE##*.}"
-            case "$EXTENSION" in
-              js)
-                LANGUAGE="JavaScript"
-                ;;
-              ts)
-                LANGUAGE="TypeScript"
-                ;;
-              py)
-                LANGUAGE="Python"
-                ;;
-              *)
-                LANGUAGE="Unknown"
-                ;;
-            esac
-
-            if [ "$LANGUAGE" != "Unknown" ] && [ -n "$PATCH" ]; then
-              INSTRUCTION="Analyze the $LANGUAGE code changes in this file for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. File: $FILE\n\nCode:\n\n$PATCH"
-
-              REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
-                                    --arg prompt "$INSTRUCTION" \
-                                    '{
-                                      model: $model,
-                                      prompt: $prompt,
-                                      options: { temperature: 0.7 },
-                                      reset: true,
-                                      stream: false
-                                    }')
-
-              # Print the REQUEST_BODY before sending it
-              echo "Request Body to be sent: $REQUEST_BODY"
-
-              RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-                -H "Content-Type: application/json" \
-                -d "$REQUEST_BODY" \
-                https://ai-agent-yz.rpplabs.com/api/generate)
-
-              HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-              RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
-
-              if [ "$HTTP_STATUS" -eq 200 ]; then
-                COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
-              else
-                COMMENT_BODY="AI agent encountered an issue analyzing $FILE."
-              fi
+            # Define the line to comment on (this is just an example, you can adjust it)
+            line_number=-1
           
-              curl -s -X POST \
-                -H "Content-Type: application/json" \
-                -H "Authorization: token $GITHUB_TOKEN" \
-                -d "{\"body\": $COMMENT_BODY}" \
-                $COMMENTS_URL
-            else
-              echo "No patch data available for $FILE."
-            fi
+            # GitHub API to create a comment on a specific line in the file
+            curl -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              -d '{
+                    "body": "This is a comment on a specific line in the file: '"$FILE"'",
+                    "commit_id": "'${{ github.sha }}'",
+                    "path": "'$FILE'",
+                    "position": '$line_number'
+                  }' \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments"
           done
