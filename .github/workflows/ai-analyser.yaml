@@ -93,7 +93,7 @@ jobs:
               RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
 
               if [ "$HTTP_STATUS" -eq 200 ]; then
-                COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
+                COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response')
               else
                 COMMENT_BODY="AI agent encountered an issue analyzing $FILE."
               fi
@@ -109,7 +109,7 @@ jobs:
                           --arg commit_id "$LATEST_COMMIT" \
                           --argjson position $POSITION \
                           '{
-                            body: ($body | @html), 
+                            body: $body, 
                             path: $path, 
                             commit_id: $commit_id, 
                             position: $position
