@@ -88,7 +88,7 @@ jobs:
               RESPONSE_BODY=$(echo "$RESPONSE" | head -n-1)
 
               if [ "$HTTP_STATUS" -eq 200 ]; then
-                COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
+                COMMENT_BODY="Result for $FILE $(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)"
               else
                 COMMENT_BODY="AI agent encountered an issue analyzing $FILE."
               fi
