@@ -108,7 +108,12 @@ jobs:
                           --arg path "$FILE" \
                           --arg commit_id "$LATEST_COMMIT" \
                           --argjson position $POSITION \
-                          '{body: $body, path: $path, commit_id: $commit_id, position: $position}')" \
+                          '{
+                            body: ($body | @html), 
+                            path: $path, 
+                            commit_id: $commit_id, 
+                            position: $position
+                          }')" \
                 "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments"
             else
               echo "No patch data available for $FILE."
