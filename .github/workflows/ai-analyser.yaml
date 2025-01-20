@@ -41,13 +41,21 @@ jobs:
           echo "Processing files: $PR_FILES"
           IFS=',' read -ra FILES_ARRAY <<< "$PR_FILES"
           for FILE in "${FILES_ARRAY[@]}"; do
-            echo "Analyzing file: $FILE"
+            echo "Adding comment to file: $FILE"
           
-            # GitHub API to create a PR-level comment (file-specific line-level comments require actual line positions)
-            COMMENT_BODY="**Changes in ${FILE}:**\n\n* [Your comment here]*"
+            # Placeholder: Set the line number to comment on
+            LINE_NUMBER=1
+          
+            # Construct the comment body
+            COMMENT_BODY="**Changes in ${FILE}:**\n\n* [Your AI-based analysis or comment here]*"
+          
+            # Call GitHub API to post a comment
             curl -X POST \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "Accept: application/vnd.github.v3+json" \
-              -d "$(jq -n --arg body "$COMMENT_BODY" '{body: $body}')" \
-              "$COMMENTS_URL"
+              -d "$(jq -n --arg body "$COMMENT_BODY" \
+                          --arg path "$FILE" \
+                          --argjson line $LINE_NUMBER \
+                          '{body: $body, path: $path, line: $line}')" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments"
           done
