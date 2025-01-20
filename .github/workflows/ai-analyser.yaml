@@ -104,7 +104,7 @@ jobs:
               curl -X POST \
                 -H "Authorization: Bearer $GITHUB_TOKEN" \
                 -H "Accept: application/vnd.github.v3+json" \
-                -d "$(jq -n --arg body "$COMMENT_BODY" \
+                -d "$(jq -n --arg body $COMMENT_BODY \
                           --arg path "$FILE" \
                           --arg commit_id "$LATEST_COMMIT" \
                           --argjson position $POSITION \
