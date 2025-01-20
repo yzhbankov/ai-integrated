@@ -97,8 +97,7 @@ jobs:
                 -H "Content-Type: application/json" \
                 -H "Authorization: token $GITHUB_TOKEN" \
                 -d "{\"body\": $COMMENT_BODY}" \
-                "https://api.github.com/repos/${{ github.repository }}/issues/comments" \
-                -d "{\"body\": \"$COMMENT_BODY\", \"path\": \"$FILE\"}"
+                $COMMENTS_URL
             else
               echo "No patch data available for $FILE."
             fi
