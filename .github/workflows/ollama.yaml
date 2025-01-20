@@ -1,0 +1,62 @@
+name: 'AI agent:'
+
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  terraform:
+    name: 'Check with AI:'
+
+    # Only execute if this is a pull request issue and a comment /plan master has been made
+    if: ${{ github.event.issue.pull_request && startsWith(github.event.comment.body, 'ollama:') }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Send Comment Data to Server
+        env:
+          COMMENTS_URL: ${{ github.event.issue.comments_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
+        run: |
+          # Send POST request and capture response
+          RESPONSE=$(curl -s -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d "{
+                  \"model\": \"$OLLAMA_MODEL\",
+                  \"prompt\": \"$COMMENT_BODY\",
+                  \"options\": {
+                    \"temperature\": 0.7
+                  },
+                  \"stream\": false
+                }" \
+            https://ai-agent-yz.rpplabs.com/api/generate)
+          
+          # Extract status code and body
+          HTTP_STATUS="${RESPONSE: -3}"
+          RESPONSE_BODY="${RESPONSE%???}"
+          
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response Body: $RESPONSE_BODY"
+          
+          # Determine comment content based on HTTP status
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            COMMENT_BODY=$(echo "$RESPONSE_BODY" | jq -r '.response' | jq -Rs .)
+          else
+            COMMENT_BODY="AI agent encountered an issue."
+          fi
+          
+          # Post the comment on the issue
+          curl \
+            -X POST \
+            $COMMENTS_URL \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -d "{\"body\": $COMMENT_BODY}"
