@@ -51,7 +51,7 @@ jobs:
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
               -H "Accept: application/vnd.github.v3+json" \
               -d '{
-                    "body": "This is a comment on a specific line in the file: '"$FILE"'",
+                    "body": '{"body": "**Changes in ${FILE}:**\n\n* [Your comment here]*}"}',
                     "commit_id": "'${{ github.sha }}'",
                     "path": "'$FILE'",
                     "position": '$line_number'
