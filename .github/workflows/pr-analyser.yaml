@@ -96,7 +96,7 @@ jobs:
               curl -s -X POST \
                 -H "Content-Type: application/json" \
                 -H "Authorization: token $GITHUB_TOKEN" \
-                -d "{\"body\": "$COMMENT_BODY", \"path\": "$FILE", \"position\": -1}" \
+                -d "{\"body\": "$COMMENT_BODY", \"path\": \"$FILE\", \"position\": -1}" \
                 $COMMENTS_URL
             else
               echo "No patch data available for $FILE."
