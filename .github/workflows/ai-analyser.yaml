@@ -30,6 +30,11 @@ jobs:
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             | jq -r '.[].filename' | paste -sd "," -)
           echo "PR_FILES=$PR_FILES" >> $GITHUB_ENV
+          
+          LATEST_COMMIT=$(curl -s "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            | jq -r '.[-1].sha')
+          echo "LATEST_COMMIT=$LATEST_COMMIT" >> $GITHUB_ENV
 
       - name: Analyze Each File
         env:
@@ -37,13 +42,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
           PR_FILES: ${{ env.PR_FILES }}
+          LATEST_COMMIT: ${{ env.LATEST_COMMIT }}
         run: |
           echo "Processing files: $PR_FILES"
           IFS=',' read -ra FILES_ARRAY <<< "$PR_FILES"
-          for FILE_INFO in "${FILES_ARRAY[@]}"; do
-            FILE=$(echo "$FILE_INFO" | cut -d':' -f1)
-            COMMIT_ID=$(echo "$FILE_INFO" | cut -d':' -f2)
-            echo "Adding comment to file: $FILE at commit: $COMMIT_ID"
+          for FILE in "${FILES_ARRAY[@]}"; do
+            echo "Adding comment to file: $FILE in commit: $LATEST_COMMIT"
           
             # Placeholder: Define the position in the diff
             POSITION=1  # Update logic to calculate actual diff positions
@@ -57,7 +61,7 @@ jobs:
               -H "Accept: application/vnd.github.v3+json" \
               -d "$(jq -n --arg body "$COMMENT_BODY" \
                           --arg path "$FILE" \
-                          --arg commit_id "$COMMIT_ID" \
+                          --arg commit_id "$LATEST_COMMIT" \
                           --argjson position $POSITION \
                           '{body: $body, path: $path, commit_id: $commit_id, position: $position}')" \
               "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments"
