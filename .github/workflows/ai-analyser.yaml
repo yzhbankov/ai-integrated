@@ -40,11 +40,13 @@ jobs:
         run: |
           echo "Processing files: $PR_FILES"
           IFS=',' read -ra FILES_ARRAY <<< "$PR_FILES"
-          for FILE in "${FILES_ARRAY[@]}"; do
-            echo "Adding comment to file: $FILE"
+          for FILE_INFO in "${FILES_ARRAY[@]}"; do
+            FILE=$(echo "$FILE_INFO" | cut -d':' -f1)
+            COMMIT_ID=$(echo "$FILE_INFO" | cut -d':' -f2)
+            echo "Adding comment to file: $FILE at commit: $COMMIT_ID"
           
-            # Placeholder: Set the line number to comment on
-            LINE_NUMBER=1
+            # Placeholder: Define the position in the diff
+            POSITION=1  # Update logic to calculate actual diff positions
           
             # Construct the comment body
             COMMENT_BODY="**Changes in ${FILE}:**\n\n* [Your AI-based analysis or comment here]*"
@@ -55,7 +57,8 @@ jobs:
               -H "Accept: application/vnd.github.v3+json" \
               -d "$(jq -n --arg body "$COMMENT_BODY" \
                           --arg path "$FILE" \
-                          --argjson line $LINE_NUMBER \
-                          '{body: $body, path: $path, line: $line}')" \
+                          --arg commit_id "$COMMIT_ID" \
+                          --argjson position $POSITION \
+                          '{body: $body, path: $path, commit_id: $commit_id, position: $position}')" \
               "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments"
           done
