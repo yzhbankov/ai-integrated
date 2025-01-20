@@ -50,7 +50,7 @@ jobs:
             echo "Adding comment to file: $FILE in commit: $LATEST_COMMIT"
           
             # Placeholder: Define the position in the diff
-            POSITION=-1  # Update logic to calculate actual diff positions
+            POSITION=1  # Update logic to calculate actual diff positions
           
             # Construct the comment body
             COMMENT_BODY="**Changes in ${FILE}:**\n\n* [Your AI-based analysis or comment here]*"
