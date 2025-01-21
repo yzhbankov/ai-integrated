@@ -1,5 +1,5 @@
 def test_py(a):
-    if a <= 1:
-        return a;
+    if a >= 1:
+        return a * test_py(a - 1)
     else:
-        return b * test_py(b - 1);
+        return 1
