@@ -69,7 +69,7 @@ jobs:
             esac
 
             if [ "$LANGUAGE" != "Unknown" ] && [ -n "$PATCH" ]; then
-              INSTRUCTION="Analyze the $LANGUAGE code changes in this file for errors, optimizations, and improvements. Respond only with the improved code, ensuring it adheres to best practices, resolves any issues, and includes comments where clarification is necessary. File: $FILE\n\nCode:\n\n$PATCH"
+              INSTRUCTION="Analyze the $LANGUAGE code changes, identify any errors or inefficiencies in the resulting code, and provide corrected or improved code if applicable. Code:\n\n$PATCH"
 
               REQUEST_BODY=$(jq -n --arg model "$OLLAMA_MODEL" \
                                     --arg prompt "$INSTRUCTION" \
